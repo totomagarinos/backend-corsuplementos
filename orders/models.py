@@ -21,8 +21,8 @@ class Order(models.Model):
     shipping_address = models.TextField(blank=True)
     shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
-    subtotal = models.DecimalField(max_digits=10, decimal_places=2)
-    total = models.DecimalField(max_digits=10, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     notes = models.TextField(blank=True)
     status = models.CharField(
