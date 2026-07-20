@@ -1,4 +1,5 @@
 from rest_framework import serializers
+
 from .models import Product, Variant
 
 
@@ -15,6 +16,8 @@ class ProductSerializer(serializers.ModelSerializer):
         source="get_category_display", read_only=True
     )
 
+    image = serializers.SerializerMethodField()
+
     class Meta:
         model = Product
         fields = [
@@ -29,3 +32,8 @@ class ProductSerializer(serializers.ModelSerializer):
             "image",
             "variants",
         ]
+
+    def get_image(self, obj):
+        if obj.image:
+            return obj.image.build_url()
+        return None
