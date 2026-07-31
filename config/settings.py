@@ -10,6 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+from datetime import timedelta
+
 from pathlib import Path
 from decouple import config
 
@@ -47,6 +49,7 @@ INSTALLED_APPS = [
     "orders",
     "products",
     "shipping",
+    "users",
 ]
 
 MIDDLEWARE = [
@@ -144,6 +147,18 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
     "x-session-id",
 ]
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=24),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+}
 
 cloudinary.config(
     cloud_name=config("CLOUDINARY_CLOUD_NAME"),

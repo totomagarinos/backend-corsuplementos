@@ -1,4 +1,5 @@
-from django.db import models
+from django.contrib.auth.models import User
+from django.db import models, transaction
 
 from products.models import Variant
 from shipping.models import ShippingOption
@@ -9,8 +10,11 @@ class Order(models.Model):
         PENDING = "pending", "Pendiente"
         CONFIRMED = "confirmed", "Confirmado"
         CANCELLED = "cancelled", "Cancelado"
+        DELIVERED = "entregado", "Entregado"
 
-    session_id = models.CharField(max_length=255, db_index=True)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, null=True, blank=True, related_name="orders"
+    )
     customer_name = models.CharField(max_length=100)
     customer_email = models.EmailField()
     customer_phone = models.CharField(max_length=50)
@@ -30,6 +34,29 @@ class Order(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        instance._original_status = instance.status
+        return instance
+
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            self._original_status = self.status
+            return super().save(*args, **kwargs)
+
+        with transaction.atomic():
+            if (
+                self._original_status == self.Status.PENDING
+                and self.status == self.Status.CONFIRMED
+            ):
+                for item in self.items.all():
+                    if item.variant:
+                        Variant.objects.filter(id=item.variant.id).update(
+                            stock=models.F("stock") - item.quantity
+                        )
+            super().save(*args, **kwargs)
 
     class Meta:
         ordering = ["-created_at"]

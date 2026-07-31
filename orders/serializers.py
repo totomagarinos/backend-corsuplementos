@@ -22,7 +22,7 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = [
             "id",
-            "session_id",
+            "user",
             "customer_name",
             "customer_email",
             "customer_phone",
@@ -40,6 +40,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         items_data = validated_data.pop("items")
+        validated_data["user"] = self.context["request"].user
 
         order = Order.objects.create(**validated_data)
 
