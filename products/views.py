@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework import viewsets
 
 from products.models import Product
@@ -15,5 +16,22 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
 
         if category is not None:
             queryset = queryset.filter(category=category)
+
+        search_query = self.request.query_params.get("q", None)
+
+        if search_query:
+            words = search_query.split()
+
+            q_objects = Q()
+
+            for word in words:
+                q_objects |= (
+                    Q(name__icontains=word)
+                    | Q(category__icontains=word)
+                    | Q(brand__icontains=word)
+                    | Q(description__icontains=word)
+                )
+
+            queryset = queryset.filter(q_objects).distinct()
 
         return queryset
