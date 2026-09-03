@@ -30,8 +30,16 @@ SECRET_KEY = config("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    ".ngrok-free.dev",
+]
 
+MERCADOPAGO_ACCESS_TOKEN = config("MERCADOPAGO_ACCESS_TOKEN")
+
+FRONTEND_URL = config("FRONTEND_URL", default="http://127.0.0.1:4200")
+BACKEND_URL = config("BACKEND_URL")
 
 # Application definition
 
@@ -50,6 +58,7 @@ INSTALLED_APPS = [
     "products",
     "shipping",
     "users",
+    "payments",
 ]
 
 MIDDLEWARE = [

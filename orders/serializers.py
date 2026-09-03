@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from orders.models import Order, OrderItem
+from payments.services import create_payment_preference
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -17,6 +18,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True)
+    payment_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -33,10 +35,15 @@ class OrderSerializer(serializers.ModelSerializer):
             "total",
             "notes",
             "status",
+            "payment_method",
+            "payment_url",
             "created_at",
             "items",
         ]
         read_only_fields = ["subtotal", "total", "status"]
+
+    def get_payment_url(self, obj):
+        return getattr(obj, "_payment_url", None)
 
     def create(self, validated_data):
         items_data = validated_data.pop("items")
@@ -65,5 +72,11 @@ class OrderSerializer(serializers.ModelSerializer):
         order.subtotal = order_subtotal
         order.total = order_subtotal + order.shipping_cost
         order.save(update_fields=["subtotal", "total"])
+
+        if order.payment_method == Order.PaymentMethod.MERCADO_PAGO:
+            preference = create_payment_preference(order)
+            order.mercadopago_preference_id = preference["id"]
+            order.save(update_fields=["mercadopago_preference_id"])
+            order._payment_url = preference["init_point"]
 
         return order
