@@ -1,3 +1,4 @@
+from email.policy import default
 from django.contrib.auth.models import User
 from django.db import models, transaction
 
@@ -11,6 +12,11 @@ class Order(models.Model):
         CONFIRMED = "confirmed", "Confirmado"
         CANCELLED = "cancelled", "Cancelado"
         DELIVERED = "entregado", "Entregado"
+        PAYMENT_REJECTED = "payment_rejected", "Pago rechazado"
+
+    class PaymentMethod(models.TextChoices):
+        MERCADO_PAGO = "mercado_pago", " Mercado Pago"
+        CASH = "efectivo", "Efectivo"
 
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, null=True, blank=True, related_name="orders"
@@ -35,9 +41,16 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    payment_method = models.CharField(
+        max_length=20, choices=PaymentMethod.choices, default=PaymentMethod.MERCADO_PAGO
+    )
+    mercadopago_preference_id = models.CharField(max_length=100, blank=True, default="")
+    mercadopago_payment_id = models.CharField(max_length=100, blank=True, default="")
+    stock_deducted = models.BooleanField(default=False)
+
     @classmethod
-    def from_db(cls, db, field_names, values):
-        instance = super().from_db(db, field_names, values)
+    def from_db(cls, db, field_names, values, **kwargs):
+        instance = super().from_db(db, field_names, values, **kwargs)
         instance._original_status = instance.status
         return instance
 
@@ -46,17 +59,23 @@ class Order(models.Model):
             self._original_status = self.status
             return super().save(*args, **kwargs)
 
+        is_transitioning_to_confirmed = (
+            self.status == self.Status.CONFIRMED
+            and self._original_status != self.Status.CONFIRMED
+        )
+        should_deduct = is_transitioning_to_confirmed and not self.stock_deducted
+
         with transaction.atomic():
-            if (
-                self._original_status == self.Status.PENDING
-                and self.status == self.Status.CONFIRMED
-            ):
+            if should_deduct:
                 for item in self.items.all():
                     if item.variant:
                         Variant.objects.filter(id=item.variant.id).update(
                             stock=models.F("stock") - item.quantity
                         )
+                self.stock_deducted = True
+
             super().save(*args, **kwargs)
+            self._original_status = self.status
 
     class Meta:
         ordering = ["-created_at"]
