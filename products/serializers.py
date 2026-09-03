@@ -4,9 +4,11 @@ from .models import Product, Variant
 
 
 class VariantSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+
     class Meta:
         model = Variant
-        fields = ["id", "sku", "size", "flavor", "price", "stock"]
+        fields = ["id", "sku", "size", "flavor", "product_name", "price", "stock"]
 
 
 class ProductSerializer(serializers.ModelSerializer):
