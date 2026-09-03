@@ -1,4 +1,4 @@
-from rest_framework import viewsets, mixins
+from rest_framework import viewsets, mixins, permissions
 
 from orders.models import Order
 from orders.serializers import OrderSerializer
@@ -11,9 +11,7 @@ class OrderViewSet(
     viewsets.GenericViewSet,
 ):
     serializer_class = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        user = self.request.user
-        if user.is_authenticated:
-            return Order.objects.filter(user=user)
-        return Order.objects.none()
+        return Order.objects.filter(user=self.request.user)
