@@ -11,7 +11,7 @@ class Order(models.Model):
         PENDING = "pending", "Pendiente"
         CONFIRMED = "confirmed", "Confirmado"
         CANCELLED = "cancelled", "Cancelado"
-        DELIVERED = "entregado", "Entregado"
+        DELIVERED = "delivered", "Entregado"
         PAYMENT_REJECTED = "payment_rejected", "Pago rechazado"
 
     class PaymentMethod(models.TextChoices):
