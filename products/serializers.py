@@ -4,11 +4,26 @@ from .models import Product, Variant
 
 
 class VariantSerializer(serializers.ModelSerializer):
+    price = serializers.DecimalField(
+        source="product.price", max_digits=10, decimal_places=2, read_only=True
+    )
+    vip_price = serializers.DecimalField(
+        source="product.vip_price", max_digits=10, decimal_places=2, read_only=True
+    )
     product_name = serializers.CharField(source="product.name", read_only=True)
 
     class Meta:
         model = Variant
-        fields = ["id", "sku", "size", "flavor", "product_name", "price", "stock"]
+        fields = [
+            "id",
+            "sku",
+            "size",
+            "flavor",
+            "product_name",
+            "price",
+            "vip_price",
+            "stock",
+        ]
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -30,7 +45,8 @@ class ProductSerializer(serializers.ModelSerializer):
             "description",
             "category",
             "category_display",
-            "base_price",
+            "price",
+            "vip_price",
             "image",
             "variants",
         ]

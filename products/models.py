@@ -23,7 +23,14 @@ class Product(models.Model):
     category = models.CharField(
         max_length=20, choices=Category.choices, default=Category.OTHER
     )
-    base_price = models.DecimalField(max_digits=10, decimal_places=2)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    vip_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Precio especial para clientes frecuentes. Dejar vacío si no aplica descuento.",
+    )
     image = CloudinaryField("image")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -40,7 +47,6 @@ class Variant(models.Model):
     size = models.CharField(max_length=50)
     flavor = models.CharField(max_length=100)
     sku = models.CharField(max_length=50, unique=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
     stock = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
 

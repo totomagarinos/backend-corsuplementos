@@ -13,7 +13,8 @@ class ProductAdmin(admin.ModelAdmin):
         "name",
         "brand",
         "category",
-        "base_price",
+        "price",
+        "vip_price",
         "is_active",
         "created_at",
     ]
