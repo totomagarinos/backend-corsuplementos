@@ -175,3 +175,5 @@ cloudinary.config(
     api_secret=config("CLOUDINARY_API_SECRET"),
     secure=True,
 )
+
+AUTH_USER_MODEL = "users.CustomUser"

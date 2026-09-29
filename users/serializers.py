@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from django.contrib.auth.models import User
+from users.models import CustomUser
 from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -9,7 +9,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         required=True,
         validators=[
             UniqueValidator(
-                queryset=User.objects.all(), message="Este email ya está en uso."
+                queryset=CustomUser.objects.all(), message="Este email ya está en uso."
             )
         ],
     )
@@ -19,12 +19,13 @@ class RegisterSerializer(serializers.ModelSerializer):
     username = serializers.CharField(required=False, read_only=True)
 
     class Meta:
-        model = User
-        fields = ["username", "email", "password", "first_name", "last_name"]
+        model = CustomUser
+        fields = ["username", "email", "password", "first_name", "last_name", "is_vip"]
+        read_only_fields = ["is_vip"]
 
     def create(self, validated_data):
         validated_data["username"] = validated_data["email"]
-        user = User.objects.create_user(**validated_data)
+        user = CustomUser.objects.create_user(**validated_data)
         return user
 
 
@@ -39,4 +40,18 @@ class EmailTokenObtainSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         attrs["username"] = attrs["email"]
 
-        return super().validate(attrs)
+        data = super().validate(attrs)
+
+        data["user"] = {
+            "id": self.user.id,
+            "email": self.user.email,
+            "is_vip": getattr(self.user, "is_vip", False),
+        }
+
+        return data
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ["id", "email", "is_vip"]

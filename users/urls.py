@@ -1,10 +1,9 @@
 from django.urls import path
 
 from users.serializers import EmailTokenObtainSerializer
-from users.views import RegisterView
+from users.views import RegisterView, CurrentUserView
 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-
 
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
@@ -14,4 +13,5 @@ urlpatterns = [
         name="login",
     ),
     path("refresh/", TokenRefreshView.as_view(), name="refresh"),
+    path("me/", CurrentUserView.as_view(), name="current_user"),
 ]
