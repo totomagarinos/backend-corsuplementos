@@ -1,5 +1,4 @@
-from email.policy import default
-from django.contrib.auth.models import User
+from users.models import CustomUser
 from django.db import models, transaction
 
 from products.models import Variant
@@ -19,7 +18,11 @@ class Order(models.Model):
         CASH = "efectivo", "Efectivo"
 
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, null=True, blank=True, related_name="orders"
+        CustomUser,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="orders",
     )
     customer_name = models.CharField(max_length=100)
     customer_email = models.EmailField()
@@ -73,6 +76,11 @@ class Order(models.Model):
                             stock=models.F("stock") - item.quantity
                         )
                 self.stock_deducted = True
+
+            if is_transitioning_to_confirmed:
+                if self.user and self.total >= 10000 and not self.user.is_vip:
+                    self.user.is_vip = True
+                    self.user.save(update_fields=["is_vip"])
 
             super().save(*args, **kwargs)
             self._original_status = self.status

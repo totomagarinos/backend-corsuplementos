@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db import transaction
 
 from orders.models import Order, OrderItem
 from payments.services import create_payment_preference
@@ -47,36 +48,43 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         items_data = validated_data.pop("items")
-        validated_data["user"] = self.context["request"].user
+        user = self.context["request"].user
+        validated_data["user"] = user
 
-        order = Order.objects.create(**validated_data)
+        with transaction.atomic():
+            order = Order.objects.create(**validated_data)
 
-        order_subtotal = 0
+            order_subtotal = 0
 
-        for item_data in items_data:
-            variant = item_data["variant"]
-            quantity = item_data["quantity"]
-            price = variant.price
-            item_subtotal = price * quantity
-            order_subtotal += item_subtotal
+            for item_data in items_data:
+                variant = item_data["variant"]
+                quantity = item_data["quantity"]
 
-            OrderItem.objects.create(
-                order=order,
-                variant=variant,
-                variant_name=str(variant),
-                quantity=quantity,
-                price=price,
-                subtotal=item_subtotal,
-            )
+                if getattr(user, "is_vip", False) and variant.product.vip_price:
+                    price = variant.product.vip_price
+                else:
+                    price = variant.product.price
 
-        order.subtotal = order_subtotal
-        order.total = order_subtotal + order.shipping_cost
-        order.save(update_fields=["subtotal", "total"])
+                item_subtotal = price * quantity
+                order_subtotal += item_subtotal
 
-        if order.payment_method == Order.PaymentMethod.MERCADO_PAGO:
-            preference = create_payment_preference(order)
-            order.mercadopago_preference_id = preference["id"]
-            order.save(update_fields=["mercadopago_preference_id"])
-            order._payment_url = preference["init_point"]
+                OrderItem.objects.create(
+                    order=order,
+                    variant=variant,
+                    variant_name=str(variant),
+                    quantity=quantity,
+                    price=price,
+                    subtotal=item_subtotal,
+                )
 
-        return order
+            order.subtotal = order_subtotal
+            order.total = order_subtotal + order.shipping_cost
+            order.save(update_fields=["subtotal", "total"])
+
+            if order.payment_method == Order.PaymentMethod.MERCADO_PAGO:
+                preference = create_payment_preference(order)
+                order.mercadopago_preference_id = preference["id"]
+                order.save(update_fields=["mercadopago_preference_id"])
+                order._payment_url = preference["init_point"]
+
+            return order
