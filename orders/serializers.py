@@ -3,6 +3,8 @@ from django.db import transaction
 
 from orders.models import Order, OrderItem
 from payments.services import create_payment_preference
+import threading
+from .notifications import send_new_order_email_to_admin
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -86,5 +88,10 @@ class OrderSerializer(serializers.ModelSerializer):
                 order.mercadopago_preference_id = preference["id"]
                 order.save(update_fields=["mercadopago_preference_id"])
                 order._payment_url = preference["init_point"]
+
+            email_thread = threading.Thread(
+                target=send_new_order_email_to_admin, args=(order,)
+            )
+            email_thread.start()
 
             return order
