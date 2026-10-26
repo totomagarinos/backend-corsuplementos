@@ -5,6 +5,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
 class RegisterSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(required=True, max_length=150)
     email = serializers.EmailField(
         required=True,
         validators=[
@@ -44,6 +45,7 @@ class EmailTokenObtainSerializer(TokenObtainPairSerializer):
 
         data["user"] = {
             "id": self.user.id,
+            "first_name": self.user.first_name,
             "email": self.user.email,
             "is_vip": getattr(self.user, "is_vip", False),
         }
@@ -54,4 +56,4 @@ class EmailTokenObtainSerializer(TokenObtainPairSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ["id", "email", "is_vip"]
+        fields = ["id", "first_name", "email", "is_vip"]
