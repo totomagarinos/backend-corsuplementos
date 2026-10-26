@@ -7,3 +7,4 @@ psycopg2-binary
 python-decouple
 cloudinary
 django-cloudinary-storage
+Pillow  # solo para seed_product_images (mockups demo)
