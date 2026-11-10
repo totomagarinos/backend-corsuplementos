@@ -17,6 +17,12 @@ class Order(models.Model):
         MERCADO_PAGO = "mercado_pago", " Mercado Pago"
         CASH = "efectivo", "Efectivo"
 
+    class StockState(models.TextChoices):
+        NONE = "none", "Sin stock comprometido"
+        RESERVED = "reserved", "Reservado"
+        COMMITTED = "committed", "Comprometido"
+        RELEASED = "released", "Liberado"
+
     user = models.ForeignKey(
         CustomUser,
         on_delete=models.CASCADE,
@@ -32,6 +38,9 @@ class Order(models.Model):
         ShippingOption, on_delete=models.SET_NULL, null=True
     )
     shipping_address = models.TextField(blank=True)
+    # Server-computed, never client-supplied. 0 today: Uber delivery is paid
+    # to the driver. If online shipping is ever charged, compute it here from
+    # the shipping option and add it to total.
     shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -49,7 +58,10 @@ class Order(models.Model):
     )
     mercadopago_preference_id = models.CharField(max_length=100, blank=True, default="")
     mercadopago_payment_id = models.CharField(max_length=100, blank=True, default="")
-    stock_deducted = models.BooleanField(default=False)
+    stock_state = models.CharField(
+        max_length=20, choices=StockState.choices, default=StockState.NONE
+    )
+    expires_at = models.DateTimeField(null=True, blank=True)
 
     @classmethod
     def from_db(cls, db, field_names, values, **kwargs):
@@ -66,17 +78,8 @@ class Order(models.Model):
             self.status == self.Status.CONFIRMED
             and self._original_status != self.Status.CONFIRMED
         )
-        should_deduct = is_transitioning_to_confirmed and not self.stock_deducted
 
         with transaction.atomic():
-            if should_deduct:
-                for item in self.items.all():
-                    if item.variant:
-                        Variant.objects.filter(id=item.variant.id).update(
-                            stock=models.F("stock") - item.quantity
-                        )
-                self.stock_deducted = True
-
             if is_transitioning_to_confirmed:
                 if self.user and self.total >= 10000 and not self.user.is_vip:
                     self.user.is_vip = True
