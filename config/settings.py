@@ -38,6 +38,15 @@ ALLOWED_HOSTS = [
 
 MERCADOPAGO_ACCESS_TOKEN = config("MERCADOPAGO_ACCESS_TOKEN")
 
+# Secret configured in Mercado Pago (Tus Integraciones -> Webhooks). Used to
+# verify the x-signature header; empty means the webhook cannot be trusted.
+MERCADOPAGO_WEBHOOK_SECRET = config("MERCADOPAGO_WEBHOOK_SECRET", default="")
+# Keep this True everywhere except local development while the secret is not
+# configured yet.
+MERCADOPAGO_WEBHOOK_VERIFY_SIGNATURE = config(
+    "MERCADOPAGO_WEBHOOK_VERIFY_SIGNATURE", default=True, cast=bool
+)
+
 FRONTEND_URL = config("FRONTEND_URL", default="http://127.0.0.1:4200")
 BACKEND_URL = config("BACKEND_URL")
 
