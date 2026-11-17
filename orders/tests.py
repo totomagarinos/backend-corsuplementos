@@ -15,6 +15,7 @@ from orders.serializers import OrderSerializer
 from orders.services import (
     confirm_order_payment,
     release_expired_reservations,
+    release_stock,
     reject_order_payment,
 )
 from payments.views import process_mp_payment
@@ -812,6 +813,23 @@ class OrderAdminTest(TestCase):
 
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.CANCELLED)
+
+    @patch("orders.serializers.send_new_order_email_to_admin")
+    def test_admin_action_reports_orders_it_could_not_confirm(self, mock_send_email):
+        order = self._create_order()
+        # The reservation was released and the units went to somebody else, so
+        # the approval has nothing left to commit.
+        release_stock(order)
+        Variant.objects.filter(pk=self.variant.pk).update(stock=0)
+
+        response = self._run_action("mark_as_confirmed", order)
+
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.PENDING)
+        self.assertContains(response, "0 pedido(s) confirmado(s)")
+        self.assertContains(response, "sin stock o con variante inactiva")
+        self.assertContains(response, f"#{order.pk}")
 
     @patch("orders.serializers.send_new_order_email_to_admin")
     @patch("orders.serializers.create_payment_preference")

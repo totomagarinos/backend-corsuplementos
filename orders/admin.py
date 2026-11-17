@@ -16,17 +16,31 @@ CONFIRMABLE_STATUSES = (Order.Status.PENDING, Order.Status.PAYMENT_REJECTED)
 def mark_as_confirmed(modeladmin, request, queryset):
     confirmed = 0
     skipped = 0
+    unconfirmed = []
 
     for order in queryset:
         if order.status not in CONFIRMABLE_STATUSES:
             skipped += 1
             continue
-        confirm_order_payment(order)
-        confirmed += 1
 
-    modeladmin.message_user(
-        request, f"{confirmed} pedido(s) confirmado(s); {skipped} sin cambios."
-    )
+        confirm_order_payment(order)
+
+        # The units can be gone by the time the payment is approved: the
+        # reservation expired, or the customer cancelled while the payment was
+        # in flight, and somebody else bought them. In that case the order
+        # stays pending, so counting it as confirmed would report a sale that
+        # never happened.
+        if order.status == Order.Status.CONFIRMED:
+            confirmed += 1
+        else:
+            unconfirmed.append(order.pk)
+
+    message = f"{confirmed} pedido(s) confirmado(s); {skipped} sin cambios."
+    if unconfirmed:
+        ids = ", ".join(f"#{pk}" for pk in unconfirmed)
+        message += f" {len(unconfirmed)} sin stock o con variante inactiva: {ids}."
+
+    modeladmin.message_user(request, message)
 
 
 @admin.action(description="Marcar pedidos seleccionados como ENTREGADOS")
