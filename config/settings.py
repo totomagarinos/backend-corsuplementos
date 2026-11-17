@@ -21,6 +21,13 @@ import cloudinary
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def csv_env(name, default=""):
+    """Read a comma-separated environment variable as a list of values."""
+    return [
+        item.strip() for item in config(name, default=default).split(",") if item.strip()
+    ]
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
@@ -30,11 +37,26 @@ SECRET_KEY = config("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = [
-    "localhost",
-    "127.0.0.1",
-    ".ngrok-free.dev",
-]
+ALLOWED_HOSTS = csv_env(
+    "ALLOWED_HOSTS", default="localhost,127.0.0.1,.ngrok-free.dev"
+)
+
+# Django needs to know the request arrived over HTTPS when a proxy terminates
+# TLS (Railway, Render, Fly, any nginx). Without this, `request.is_secure()`
+# lies and the secure-cookie flags below do not behave as expected.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Origins allowed to POST with a CSRF token (the Django admin). Must include
+# the scheme: https://example.up.railway.app
+CSRF_TRUSTED_ORIGINS = csv_env("CSRF_TRUSTED_ORIGINS")
+
+# Disabled by default so local development over plain HTTP keeps working.
+# Enable them in the deployment environment. Keep SECURE_SSL_REDIRECT off when
+# the platform terminates TLS at its edge: the redirect can break health checks
+# that reach the container over HTTP.
+SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=False, cast=bool)
+SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=False, cast=bool)
+CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=False, cast=bool)
 
 MERCADOPAGO_ACCESS_TOKEN = config("MERCADOPAGO_ACCESS_TOKEN")
 
@@ -73,6 +95,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    # Serves the collected static files (admin CSS/JS) with DEBUG=False.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -150,11 +174,20 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+# Where `collectstatic` writes. WhiteNoise serves this directory in production.
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:4200",
-]
+STORAGES = {
+    # Product images use CloudinaryField, which keeps its own storage, so the
+    # default backend stays on disk.
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
+
+CORS_ALLOWED_ORIGINS = csv_env(
+    "CORS_ALLOWED_ORIGINS", default="http://localhost:4200"
+)
 
 CORS_ALLOW_HEADERS = [
     "accept",
@@ -193,3 +226,32 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+
+
+# Logging
+# Platforms capture stdout, so a console handler is all that is needed. Without
+# this, production errors leave no trace anywhere.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {
+            "format": "{levelname} {asctime} {name} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+        },
+    },
+    "root": {"handlers": ["console"], "level": "INFO"},
+    "loggers": {
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+    },
+}
