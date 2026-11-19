@@ -162,9 +162,12 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = "en-us"
+# The store only sells in San Juan, Argentina, so the admin shows dates and
+# amounts in the local language and zone instead of UTC. `USE_TZ` stays True:
+# timestamps are still stored in UTC, only the presentation is localized.
+LANGUAGE_CODE = "es-ar"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "America/Argentina/San_Juan"
 
 USE_I18N = True
 
