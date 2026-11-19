@@ -10,7 +10,7 @@ separate Angular repository that consumes this API.
 ## Requirements
 
 - Python 3.13+
-- PostgreSQL 16 (the bundled `docker-compose.yml` provides one)
+- PostgreSQL (16 in the bundled `docker-compose.yml`, 18 on Railway)
 - A Cloudinary account for product images
 - Mercado Pago credentials (test credentials are enough)
 
