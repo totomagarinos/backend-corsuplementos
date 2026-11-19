@@ -25,6 +25,18 @@ from products.models import Product
 # identificarlos y borrarlos sin tocar las imágenes reales.
 DEFAULT_FOLDER = "corsuplementos/products"
 
+
+def stored_public_id(product):
+    """The Cloudinary public id saved on the product, or "" when there is none.
+
+    `str()` on an empty `CloudinaryField` raises TypeError: the underlying
+    FileField returns `None` from `__str__` and Python refuses to build a string
+    from it. Emptiness has to be checked before converting, which is exactly the
+    state of every product that `seed_products` just created.
+    """
+    return str(product.image) if product.image else ""
+
+
 # Silueta y color por categoría. La variedad es intencional: una grilla con 24
 # frascos idénticos se ve plana y no sirve para juzgar el layout.
 #   parts: (x0, y0, x1, y1, radio, tono) en fracciones del lado del lienzo.
@@ -368,7 +380,7 @@ class Command(BaseCommand):
         for product in products:
             public_id = f"{folder}/demo-{product.slug}"
 
-            if not force and str(product.image) == public_id:
+            if not force and stored_public_id(product) == public_id:
                 skipped += 1
                 continue
 
@@ -427,7 +439,7 @@ class Command(BaseCommand):
             except Exception as exc:  # noqa: BLE001
                 self.stdout.write(self.style.ERROR(f"{product.slug}: {exc}"))
 
-            if str(product.image) == public_id:
+            if stored_public_id(product) == public_id:
                 product.image = ""
                 product.save(update_fields=["image", "updated_at"])
                 cleared += 1
