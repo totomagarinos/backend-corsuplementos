@@ -7,7 +7,6 @@ psycopg2-binary
 python-decouple
 cloudinary
 django-cloudinary-storage
-Pillow  # solo para seed_product_images (mockups demo)
 
 # Production serving: runserver is not a WSGI server and Django stops serving
 # static files as soon as DEBUG is off.

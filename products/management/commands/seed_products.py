@@ -21,9 +21,8 @@ from django.db import transaction
 
 from products.models import Product, Variant
 
-# Las imágenes NO se asignan acá. Las genera y sube `seed_product_images`, que
-# necesita hablar con Cloudinary; separar eso mantiene este comando escribiendo
-# sólo en la base local.
+# Las imágenes no se asignan acá: se cargan desde el admin de Django, que habla
+# con Cloudinary. Este comando escribe sólo en la base.
 
 # Bullets por categoría. El primer elemento es el copete del producto; el resto
 # se renderiza como lista, igual que los productos ya cargados a mano.
@@ -450,8 +449,8 @@ class Command(BaseCommand):
         if created_products:
             self.stdout.write(
                 self.style.WARNING(
-                    "Los productos nuevos no tienen imagen. Generá y subí los mockups con: "
-                    "manage.py seed_product_images"
+                    "Los productos nuevos no tienen imagen. Cargalas desde el admin "
+                    "de Django antes de mostrar la tienda."
                 )
             )
 

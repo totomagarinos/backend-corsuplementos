@@ -85,7 +85,6 @@ comments there explain why each transition is written the way it is.
 
 ```bash
 ./venv/bin/python manage.py seed_products              # demo catalogue, idempotent
-./venv/bin/python manage.py seed_product_images        # mockups to Cloudinary
 ./venv/bin/python manage.py expire_stock_reservations  # release expired holds
 ./venv/bin/python manage.py expire_stock_reservations --dry-run
 ```
