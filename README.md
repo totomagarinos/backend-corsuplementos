@@ -293,7 +293,10 @@ The Django admin is the seller's panel: it manages products, variants, stock,
 shipping options, orders and users, and it owns the actions that move an order
 through its lifecycle.
 
-For a real client deployment, before handing over the keys:
+## Hardening for a real deployment
+
+The defaults above are right for a demo. A store handling real money needs
+more, and these are the gaps this project leaves open on purpose:
 
 - a `staff` user with the permissions the seller actually needs, not a
   superuser;
@@ -302,5 +305,3 @@ For a real client deployment, before handing over the keys:
 - a non-default admin path, to cut down on automated scanning;
 - a custom domain, with `api.` and `admin.` subdomains pointing at the same
   Railway service.
-
-None of this is required for the academy review.
