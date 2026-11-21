@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from django.core.management import call_command
 from django.db import connection
-from django.test import Client, TestCase, TransactionTestCase
+from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient, APIRequestFactory
 
@@ -125,6 +125,59 @@ class OrderAmountIntegrityTest(TestCase):
             for line in preference_data["items"]
         )
         self.assertEqual(charged_by_mercadopago, Decimal("10000.00"))
+
+    @patch("orders.serializers.send_new_order_email_to_admin")
+    @patch("payments.services.mercadopago.SDK")
+    @override_settings(FRONTEND_URL="https://shop.example.com")
+    def test_mercadopago_preference_auto_returns_on_public_frontend(
+        self, mock_sdk_class, mock_send_email
+    ):
+        mock_sdk = mock_sdk_class.return_value
+        mock_sdk.preference.return_value.create.return_value = {
+            "status": 201,
+            "response": {"id": "pref-https", "init_point": "https://mp/pref-https"},
+        }
+
+        response = self.client.post("/api/orders/", self._payload(), format="json")
+        self.assertEqual(response.status_code, 201, response.data)
+
+        preference_data = mock_sdk.preference.return_value.create.call_args[0][0]
+        order_id = response.data["id"]
+
+        self.assertEqual(preference_data["auto_return"], "approved")
+        self.assertEqual(
+            preference_data["back_urls"]["success"],
+            f"https://shop.example.com/order/{order_id}/confirmation",
+        )
+        self.assertEqual(
+            preference_data["back_urls"]["failure"],
+            f"https://shop.example.com/order/{order_id}/confirmation",
+        )
+        self.assertEqual(
+            preference_data["back_urls"]["pending"],
+            f"https://shop.example.com/order/{order_id}/confirmation",
+        )
+
+    @patch("orders.serializers.send_new_order_email_to_admin")
+    @patch("payments.services.mercadopago.SDK")
+    @override_settings(FRONTEND_URL="http://localhost:4200")
+    def test_mercadopago_preference_omits_auto_return_on_local_frontend(
+        self, mock_sdk_class, mock_send_email
+    ):
+        mock_sdk = mock_sdk_class.return_value
+        mock_sdk.preference.return_value.create.return_value = {
+            "status": 201,
+            "response": {"id": "pref-local", "init_point": "https://mp/pref-local"},
+        }
+
+        response = self.client.post("/api/orders/", self._payload(), format="json")
+        self.assertEqual(response.status_code, 201, response.data)
+
+        preference_data = mock_sdk.preference.return_value.create.call_args[0][0]
+
+        # A localhost back_url never returns to the site, so asking Mercado Pago
+        # to redirect automatically would only surface "Algo ha salido mal".
+        self.assertNotIn("auto_return", preference_data)
 
     @patch("orders.serializers.send_new_order_email_to_admin")
     @patch("orders.serializers.create_payment_preference")

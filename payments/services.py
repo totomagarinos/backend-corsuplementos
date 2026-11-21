@@ -28,5 +28,13 @@ def create_payment_preference(order):
         "notification_url": f"{settings.BACKEND_URL}/api/payments/webhook/",
     }
 
+    # Mercado Pago rejects local hosts in `back_urls`: the checkout finishes on
+    # its own "Algo ha salido mal" screen instead of returning. Automatic return
+    # also needs a reachable HTTPS origin, so it is only requested when the
+    # frontend is actually published. Locally the buyer uses the "Volver al
+    # sitio" button, which is the only thing that works without a public origin.
+    if settings.FRONTEND_URL.startswith("https://"):
+        preference_data["auto_return"] = "approved"
+
     result = sdk.preference().create(preference_data)
     return result["response"]
